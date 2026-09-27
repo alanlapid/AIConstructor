@@ -1,4 +1,8 @@
+<p align="center"><img src="docs/icon.png" width="128" alt="AIConstructor"></p>
+
 # AIConstructor
+
+[![Modrinth](https://img.shields.io/modrinth/dt/aiconstructor?logo=modrinth&label=Modrinth)](https://modrinth.com/plugin/aiconstructor) [![Build](https://github.com/alanlapid/AIConstructor/actions/workflows/build.yml/badge.svg)](https://github.com/alanlapid/AIConstructor/actions)
 
 **Build Minecraft structures from a text prompt or a photo, using the LLM of your choice.**
 
