@@ -1,0 +1,33 @@
+name: AIConstructor
+version: '${project.version}'
+main: io.github.alanlapid.aiconstructor.AIConstructor
+api-version: '26.2'
+author: alanlapid
+website: https://github.com/alanlapid/AIConstructor
+description: Build structures from a text prompt or a photo using the LLM of your choice (Gemini, Claude, OpenAI-compatible or local Ollama).
+softdepend: [WorldGuard]
+libraries:
+  - com.anthropic:anthropic-java:2.65.0
+
+commands:
+  aibuild:
+    description: Build a structure with AI.
+    usage: /aibuild <prompt> | photo <url> [prompt] | confirm | cancel | undo | status | reload
+    aliases: [aiconstructor, construir]
+
+permissions:
+  aiconstructor.use:
+    description: Generate builds from a text prompt.
+    default: op
+  aiconstructor.photo:
+    description: Generate builds from a reference photo.
+    default: op
+  aiconstructor.admin:
+    description: Reload the plugin configuration.
+    default: op
+  aiconstructor.bypass.limits:
+    description: No cooldown and no daily limit.
+    default: false
+  aiconstructor.bypass.protection:
+    description: Build inside protected regions the player could not normally build in.
+    default: false

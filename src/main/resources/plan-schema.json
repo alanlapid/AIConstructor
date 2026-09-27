@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "size": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "z": { "type": "integer" }
+      },
+      "required": ["x", "y", "z"],
+      "additionalProperties": false
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "shape": {
+            "type": "string",
+            "enum": ["fill", "hollow_box", "walls", "line", "block", "cylinder", "sphere", "pyramid"]
+          },
+          "block": { "type": "string" },
+          "from": { "type": "array", "items": { "type": "integer" } },
+          "to": { "type": "array", "items": { "type": "integer" } },
+          "center": { "type": "array", "items": { "type": "integer" } },
+          "radius": { "type": "number" },
+          "height": { "type": "integer" },
+          "hollow": { "type": "boolean" }
+        },
+        "required": ["shape", "block"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["name", "size", "parts"],
+  "additionalProperties": false
+}

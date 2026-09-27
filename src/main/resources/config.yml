@@ -1,0 +1,113 @@
+# ------------------------------------------------------------------------------------------------
+#  AIConstructor - https://github.com/alanlapid/AIConstructor
+#  After editing this file run: /aibuild reload
+# ------------------------------------------------------------------------------------------------
+
+# Message language: file name inside plugins/AIConstructor/lang/ (bundled: en, es).
+language: en
+
+# ------------------------------------------------------------------------------------------------
+#  AI provider
+#  type: gemini | anthropic | openai | ollama
+#
+#  - gemini     Google AI Studio (has a free tier). Key: https://aistudio.google.com
+#  - anthropic  Claude. Key: https://console.anthropic.com
+#  - openai     Any OpenAI-compatible API: OpenAI, OpenRouter, Groq, DeepSeek, Mistral, Together,
+#               LM Studio, vLLM, LocalAI... Set base-url accordingly.
+#  - ollama     Local models through Ollama's native API (no key needed).
+#
+#  api-key accepts "env:VARIABLE_NAME" to read the key from an environment variable instead of
+#  storing it in this file.
+#
+#  models: tried in order. If one is overloaded or out of quota, the next one is used.
+# ------------------------------------------------------------------------------------------------
+provider:
+  type: gemini
+  api-key: "PASTE_YOUR_KEY_HERE"
+  # Leave empty to use the provider's default URL.
+  #   openai     default https://api.openai.com/v1
+  #              OpenRouter https://openrouter.ai/api/v1 | Groq https://api.groq.com/openai/v1
+  #              LM Studio http://localhost:1234/v1   | vLLM http://localhost:8000/v1
+  #   ollama     default http://localhost:11434
+  #   anthropic  default https://api.anthropic.com
+  base-url: ""
+  models:
+    - gemini-3.8-flash
+    - gemini-3.7-flash
+    - gemini-3.5-flash
+  # Full passes over the model list before giving up.
+  rounds: 3
+  retry-delay-seconds: 4
+  timeout-seconds: 180
+  temperature: 0.6
+  max-output-tokens: 16000
+  # Does the model accept images? Needed for /aibuild photo.
+  vision: true
+
+  # Only for type: openai
+  openai:
+    # json_schema (best, if supported) | json_object | none
+    response-format: json_schema
+    # Extra HTTP headers, e.g. for OpenRouter:
+    extra-headers: {}
+    #  HTTP-Referer: "https://your-server.com"
+    #  X-Title: "My Server"
+
+  # Only for type: anthropic
+  anthropic:
+    # Server-side refusal fallback for claude-opus-5 / claude-fable-5-1 (recommended).
+    refusal-fallback: true
+
+# ------------------------------------------------------------------------------------------------
+#  Limits
+# ------------------------------------------------------------------------------------------------
+limits:
+  # Maximum size per axis (blocks). Hard cap 256.
+  max-size: 48
+  # Maximum blocks per build.
+  max-blocks: 40000
+  # Blocks placed per server tick (20 ticks = 1 second).
+  blocks-per-tick: 150
+  cooldown-seconds: 30
+  # Default builds per player per day. Give more with the permission aiconstructor.limit.<number>
+  # (highest wins) or unlimited with aiconstructor.bypass.limits. Failed AI calls do not count.
+  daily-limit: 10
+  # Seconds the particle preview stays before it expires.
+  pending-expire-seconds: 180
+  # Builds each player can undo (kept in memory, lost on restart).
+  undo-history: 5
+  max-image-mb: 8
+  max-prompt-length: 500
+
+# Worlds where /aibuild cannot be used.
+disabled-worlds: []
+
+protection:
+  # Refuse builds that would place blocks where the player cannot build (WorldGuard regions,
+  # including ProtectionStones). Requires WorldGuard; ignored otherwise.
+  worldguard: true
+
+# Blocks the AI is never allowed to place.
+blocked-blocks:
+  - tnt
+  - lava
+  - water
+  - fire
+  - soul_fire
+  - command_block
+  - chain_command_block
+  - repeating_command_block
+  - structure_block
+  - structure_void
+  - jigsaw
+  - barrier
+  - bedrock
+  - spawner
+  - trial_spawner
+  - vault
+  - end_portal
+  - end_portal_frame
+  - end_gateway
+  - nether_portal
+  - light
+  - reinforced_deepslate

@@ -1,0 +1,68 @@
+# Mensajes de AIConstructor (formato MiniMessage: https://docs.advntr.dev/minimessage/format.html)
+prefix: "<gradient:#A26AFF:#09ADD3><b>IA</b></gradient> <dark_gray>»</dark_gray> "
+
+no-permission: "<red>No tienes permiso para hacer eso."
+players-only: "<red>Este comando solo se usa dentro del juego."
+reload-done: "<green>Configuración recargada."
+missing-key: "<red>El servidor todavía no configuró la clave del proveedor de IA."
+
+help: |-
+  <gradient:#A26AFF:#09ADD3><b>Constructor con IA</b></gradient>
+  <white>/{label} <descripción></white> <gray>- ej: /{label} un velero de madera con velas blancas
+  <white>/{label} photo <enlace> [descripción]</white> <gray>- usa una foto de referencia (enlace directo a PNG/JPG/WEBP)
+  <white>/{label} confirm | cancel | undo | status</white>
+  <dark_gray>La construcción aparece delante de ti, mirando hacia donde miras.
+
+thinking: "<gray>Diseñando tu construcción... <dark_gray>(10-60 s)"
+thinking-photo: "<gray>Diseñando tu construcción a partir de la foto... <dark_gray>(10-60 s)"
+trying: "<gradient:#A26AFF:#09ADD3>Pensando</gradient> <gray>con <white>{model}</white> <dark_gray>(intento {attempt}/{total})"
+attempt-failed: "<dark_gray>  › {model}: {reason}, probando otro..."
+generation-failed: "<red>{error}"
+refund-note: "<gray>Este intento no se descontó de tu límite diario. Prueba de nuevo en unos minutos."
+too-many-blocks: "<red>La IA generó {blocks} bloques (máximo {max}). Pide algo más pequeño."
+no-valid-blocks: "<red>La IA no generó ningún bloque válido. Prueba a describirlo de otra forma."
+protected-area: "<red>{blocks} bloques caerían en una zona protegida donde no puedes construir. Muévete a otro sitio y vuelve a pedirlo."
+world-disabled: "<red>Las construcciones con IA están desactivadas en este mundo."
+
+preview: |-
+  <gradient:#A26AFF:#09ADD3><b>{name}</b></gradient>
+  <gray>Tamaño: <white>{sx}x{sy}x{sz}</white> | Bloques: <white>{blocks}</white> | Piezas: <white>{parts}</white>
+  <gray>Materiales: <white>{materials}</white>
+  <gray>El contorno está marcado con partículas (caduca en {expire}s).
+  <click:run_command:'/aibuild confirm'><hover:show_text:'Empezar a construir'><green><b>[CONSTRUIR]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Descartar'><red><b>[CANCELAR]</b></red></hover></click> <dark_gray>| ¿No te gusta la posición? Mira hacia otro lado y repite el pedido.
+rejected-blocks: "<dark_gray>Bloques descartados: {blocks}"
+preview-expired: "<gray>La vista previa de <white>{name}</white> caducó."
+nothing-pending: "<red>No hay ninguna construcción esperando confirmación."
+preview-cancelled: "<yellow>Vista previa cancelada."
+placement-stopped: "<yellow>Construcción detenida. Lo ya colocado se quita con <white>/aibuild undo</white>."
+nothing-to-cancel: "<gray>No hay nada que cancelar."
+undo-running: "<red>Primero detén la construcción en curso con <white>/aibuild cancel</white>."
+nothing-to-undo: "<gray>No hay construcciones para deshacer."
+undoing: "<yellow>Deshaciendo <white>{name}</white>..."
+build-progress: "<gradient:#A26AFF:#09ADD3>Construyendo {name}</gradient> <gray>{percent}% <dark_gray>({done}/{total})"
+build-done: "<green>¡<white>{name}</white> terminado!</green> <gray>{blocks} bloques colocados.{skipped} <dark_gray>|</dark_gray> <click:run_command:'/aibuild undo'><hover:show_text:'Deshacer esta construcción'><red>[DESHACER]</red></hover></click>"
+protected-skipped: " <gray>({count} cofres/carteles existentes no se tocaron)"
+
+busy-generating: "<red>Ya estoy diseñando una construcción para ti, espera a que termine."
+busy-placing: "<red>Hay una construcción colocándose. Espera o usa <white>/aibuild cancel</white>."
+cooldown: "<red>Espera <white>{seconds}s</white> antes de otra construcción."
+daily-limit: "<red>Llegaste al límite de <white>{limit}</white> construcciones por hoy."
+prompt-too-long: "<red>La descripción es demasiado larga (máximo {max} caracteres)."
+photo-usage: "<red>Uso: <white>/{label} photo <enlace-a-la-imagen> [descripción]"
+photo-unsupported: "<red>El modelo de IA configurado no acepta imágenes."
+
+status: |-
+  <gray>Usadas hoy: <white>{used}/{limit}</white> | Para deshacer: <white>{undo}</white> | Diseñando: <white>{generating}</white> | Colocando: <white>{placing}</white>
+  <gray>Pendiente: <white>{pending}</white>
+  <gray>Proveedor: <white>{provider}</white> | Modelos: <white>{models}</white>
+yes: "sí"
+no: "no"
+none: "ninguna"
+unlimited: "∞"
+
+reason-overloaded: "saturado"
+reason-quota: "límite de uso o cuota alcanzada"
+reason-unavailable: "modelo no disponible"
+reason-network: "error de red"
+reason-invalid: "respuesta inválida"
+reason-other: "error"

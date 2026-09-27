@@ -1,0 +1,69 @@
+# AIConstructor messages (MiniMessage format: https://docs.advntr.dev/minimessage/format.html)
+prefix: "<gradient:#A26AFF:#09ADD3><b>AI</b></gradient> <dark_gray>»</dark_gray> "
+
+no-permission: "<red>You don't have permission to do that."
+players-only: "<red>This command can only be used in game."
+reload-done: "<green>Configuration reloaded."
+missing-key: "<red>The server has not configured an AI provider key yet."
+
+help: |-
+  <gradient:#A26AFF:#09ADD3><b>AI Constructor</b></gradient>
+  <white>/{label} <prompt></white> <gray>- e.g. /{label} a small wooden sailboat with white sails
+  <white>/{label} photo <url> [prompt]</white> <gray>- use a photo as reference (direct PNG/JPG/WEBP link)
+  <white>/{label} confirm | cancel | undo | status</white>
+  <dark_gray>The build appears in front of you, facing where you look.
+
+thinking: "<gray>Designing your build... <dark_gray>(10-60 s)"
+thinking-photo: "<gray>Designing your build from the photo... <dark_gray>(10-60 s)"
+trying: "<gradient:#A26AFF:#09ADD3>Thinking</gradient> <gray>with <white>{model}</white> <dark_gray>(attempt {attempt}/{total})"
+attempt-failed: "<dark_gray>  › {model}: {reason}, trying another..."
+generation-failed: "<red>{error}"
+refund-note: "<gray>This attempt did not count towards your daily limit. Try again in a few minutes."
+too-many-blocks: "<red>The AI produced {blocks} blocks (max {max}). Ask for something smaller."
+no-valid-blocks: "<red>The AI did not produce any valid block. Try describing it differently."
+protected-area: "<red>{blocks} blocks would land in a protected area where you can't build. Move somewhere else and try again."
+world-disabled: "<red>AI builds are disabled in this world."
+
+preview: |-
+  <gradient:#A26AFF:#09ADD3><b>{name}</b></gradient>
+  <gray>Size: <white>{sx}x{sy}x{sz}</white> | Blocks: <white>{blocks}</white> | Parts: <white>{parts}</white>
+  <gray>Materials: <white>{materials}</white>
+  <gray>The outline is shown with particles (expires in {expire}s).
+  <click:run_command:'/aibuild confirm'><hover:show_text:'Start building'><green><b>[BUILD]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Discard'><red><b>[CANCEL]</b></red></hover></click> <dark_gray>| Don't like the spot? Look somewhere else and ask again.
+rejected-blocks: "<dark_gray>Discarded blocks: {blocks}"
+preview-expired: "<gray>The preview of <white>{name}</white> expired."
+nothing-pending: "<red>There is no build waiting for confirmation."
+preview-cancelled: "<yellow>Preview cancelled."
+placement-stopped: "<yellow>Build stopped. Remove what was already placed with <white>/aibuild undo</white>."
+nothing-to-cancel: "<gray>Nothing to cancel."
+undo-running: "<red>Stop the build in progress first with <white>/aibuild cancel</white>."
+nothing-to-undo: "<gray>Nothing to undo."
+undoing: "<yellow>Undoing <white>{name}</white>..."
+build-progress: "<gradient:#A26AFF:#09ADD3>Building {name}</gradient> <gray>{percent}% <dark_gray>({done}/{total})"
+build-done: "<green><white>{name}</white> finished!</green> <gray>{blocks} blocks placed.{skipped} <dark_gray>|</dark_gray> <click:run_command:'/aibuild undo'><hover:show_text:'Undo this build'><red>[UNDO]</red></hover></click>"
+protected-skipped: " <gray>({count} existing containers/signs were left untouched)"
+
+busy-generating: "<red>I'm already designing a build for you, please wait."
+busy-placing: "<red>A build is being placed. Wait or use <white>/aibuild cancel</white>."
+cooldown: "<red>Wait <white>{seconds}s</white> before another build."
+daily-limit: "<red>You reached your limit of <white>{limit}</white> builds for today."
+prompt-too-long: "<red>The prompt is too long (max {max} characters)."
+photo-usage: "<red>Usage: <white>/{label} photo <image-url> [prompt]"
+photo-unsupported: "<red>The configured AI model does not accept images."
+
+status: |-
+  <gray>Used today: <white>{used}/{limit}</white> | Undo available: <white>{undo}</white> | Designing: <white>{generating}</white> | Placing: <white>{placing}</white>
+  <gray>Pending: <white>{pending}</white>
+  <gray>Provider: <white>{provider}</white> | Models: <white>{models}</white>
+yes: "yes"
+no: "no"
+none: "none"
+unlimited: "∞"
+
+# Reasons shown for failed attempts
+reason-overloaded: "overloaded"
+reason-quota: "rate limit or quota reached"
+reason-unavailable: "model not available"
+reason-network: "network error"
+reason-invalid: "invalid answer"
+reason-other: "error"
