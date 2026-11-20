@@ -13,7 +13,7 @@
 
 The AI designs the build, you get a **particle preview** in front of you, and after confirming it is placed **block by block**. Every build can be **undone**.
 
-- Paper **26.2** · Java 25
+- **Paper** or **Spigot** 26.3 (one jar for both) · Java 25
 - Works with **Gemini, Claude, any OpenAI-compatible API, and local models** (Ollama, LM Studio, vLLM…)
 - Each server uses **its own API key**. Nothing goes through third-party servers.
 
@@ -37,7 +37,7 @@ The AI designs the build, you get a **particle preview** in front of you, and af
 
 ## Installation
 
-1. Drop `AIConstructor-x.y.z.jar` in `plugins/` and start the server once. Paper downloads the Anthropic SDK library automatically on first start.
+1. Drop `AIConstructor-x.y.z.jar` in `plugins/` and start the server once. The server downloads the Anthropic SDK library automatically on first start.
 2. Edit `plugins/AIConstructor/config.yml`: choose `provider.type`, set `provider.api-key` and `provider.models`.
 3. Run `/aibuild reload`.
 

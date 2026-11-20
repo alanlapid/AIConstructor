@@ -352,7 +352,7 @@ public final class BuildManager implements Listener {
                 Block block = p.world.getBlockAt(pl.x(), pl.y(), pl.z());
                 Material current = block.getType();
                 // Never overwrite chests, furnaces, signs, etc.
-                if (!current.isAir() && block.getState(false) instanceof TileState) {
+                if (!current.isAir() && block.getState() instanceof TileState) {
                     skipped[0]++;
                     continue;
                 }
@@ -365,7 +365,7 @@ public final class BuildManager implements Listener {
             }
             Player online = Bukkit.getPlayer(id);
             if (online != null) {
-                online.sendActionBar(messages().component("build-progress", "name", p.name,
+                messages().sendActionBar(online, messages().component("build-progress", "name", p.name,
                         "percent", 100L * index[0] / total, "done", index[0], "total", total));
             }
             if (index[0] >= total) {

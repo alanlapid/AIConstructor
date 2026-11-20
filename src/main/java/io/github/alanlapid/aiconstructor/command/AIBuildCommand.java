@@ -156,7 +156,7 @@ public final class AIBuildCommand implements TabExecutor {
         PlanGenerator.Progress progress = new PlanGenerator.Progress() {
             @Override
             public void trying(String model, int attempt, int totalAttempts) {
-                onMain(id, p -> p.sendActionBar(msg().component("trying", "model", model, "attempt", attempt, "total", totalAttempts)));
+                onMain(id, p -> msg().sendActionBar(p, msg().component("trying", "model", model, "attempt", attempt, "total", totalAttempts)));
             }
 
             @Override
