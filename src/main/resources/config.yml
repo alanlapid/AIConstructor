@@ -86,6 +86,21 @@ limits:
   max-image-mb: 8
   max-prompt-length: 500
 
+# ------------------------------------------------------------------------------------------------
+#  Preview
+# ------------------------------------------------------------------------------------------------
+preview:
+  # Show the build as fake blocks that only its owner can see (nothing is placed until confirmed).
+  # When false, only the particle outline is shown.
+  ghost-blocks: true
+  # Colored move handles (red X, green Y, blue Z arrows) around the preview, only visible to its owner.
+  # Left-click an arrow to grab it, look around to drag the build along that axis, left-click or sneak to drop.
+  handles: true
+  # How far away (blocks) a handle can be grabbed from.
+  handle-reach: 64
+  # How far (blocks, per axis) a preview can be moved from where it first appeared. 0 disables moving.
+  max-move-distance: 64
+
 # Worlds where /aibuild cannot be used.
 disabled-worlds: []
 

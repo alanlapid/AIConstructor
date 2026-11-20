@@ -10,6 +10,8 @@ import io.github.alanlapid.aiconstructor.util.ImageDownloader;
 import io.github.alanlapid.aiconstructor.util.Messages;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -26,10 +28,14 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-/** /aibuild. Subcommands also accept Spanish names (confirmar, cancelar, deshacer, estado, recargar, foto). */
+/** /aibuild. Subcommands also accept Spanish names (confirmar, cancelar, deshacer, estado, recargar, foto, mover). */
 public final class AIBuildCommand implements TabExecutor {
 
-    private static final List<String> SUBCOMMANDS = List.of("photo", "confirm", "cancel", "undo", "status", "reload");
+    private static final List<String> SUBCOMMANDS = List.of("photo", "move", "confirm", "cancel", "undo", "status", "reload");
+    private static final List<String> MOVE_DIRECTIONS = List.of("x", "y", "z", "up", "down", "forward", "back", "left",
+            "right", "north", "south", "east", "west");
+    /** Largest single step, so offsets cannot overflow; the real limit is preview.max-move-distance. */
+    private static final int MAX_STEP = 10_000;
 
     private final AIConstructor plugin;
 
@@ -95,6 +101,7 @@ public final class AIBuildCommand implements TabExecutor {
                 }
             }
             case "status" -> status(player);
+            case "move" -> move(player, label, Arrays.copyOfRange(args, 1, args.length));
             case "photo" -> {
                 if (!player.hasPermission("aiconstructor.photo")) {
                     msg().send(player, "no-permission");
@@ -123,6 +130,7 @@ public final class AIBuildCommand implements TabExecutor {
             case "status", "estado" -> "status";
             case "reload", "recargar" -> "reload";
             case "photo", "foto" -> "photo";
+            case "move", "mover" -> "move";
             default -> "";
         };
     }
@@ -251,6 +259,81 @@ public final class AIBuildCommand implements TabExecutor {
         if (!plan.rejectedBlocks().isEmpty()) {
             msg().sendPlain(player, "rejected-blocks", "blocks", String.join(", ", plan.rejectedBlocks()));
         }
+        msg().sendPlain(player, "move-controls");
+    }
+
+    private void move(Player player, String label, String[] args) {
+        int[] d = parseMove(player, args);
+        if (d == null) {
+            msg().send(player, "move-usage", "label", label);
+            return;
+        }
+        BuildManager builds = plugin.builds();
+        BuildManager.MoveOutcome outcome = builds.move(player, d[0], d[1], d[2]);
+        switch (outcome.result()) {
+            case MOVED -> {
+                BuildManager.Pending p = builds.getPending(player.getUniqueId());
+                msg().sendActionBar(player, msg().component("moved",
+                        "x", p.minX, "y", p.minY, "z", p.minZ,
+                        "ox", signed(p.offsetX), "oy", signed(p.offsetY), "oz", signed(p.offsetZ)));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.6f, 1.6f);
+            }
+            case NOTHING_PENDING -> msg().send(player, "nothing-pending");
+            case OUT_OF_WORLD -> msg().send(player, "move-out-of-world");
+            case TOO_FAR -> msg().send(player, "move-too-far",
+                    "max", Math.max(0, plugin.getConfig().getInt("preview.max-move-distance", 64)));
+            case PROTECTED -> msg().send(player, "move-protected", "blocks", outcome.deniedBlocks());
+        }
+    }
+
+    private static String signed(int n) {
+        return n > 0 ? "+" + n : String.valueOf(n);
+    }
+
+    /**
+     * Accepts "&lt;dx&gt; &lt;dy&gt; &lt;dz&gt;", "&lt;x|y|z&gt; [n]" or "&lt;direction&gt; [n]". Directions are world
+     * (up, down, north, south, east, west) or relative to where the player looks (forward, back, left, right).
+     * Returns null when the arguments do not make sense.
+     */
+    static int[] parseMove(Player player, String[] args) {
+        try {
+            if (args.length == 3) {
+                int[] d = {Integer.parseInt(args[0]), Integer.parseInt(args[1]), Integer.parseInt(args[2])};
+                for (int v : d) {
+                    if (Math.abs(v) > MAX_STEP) {
+                        return null;
+                    }
+                }
+                return d;
+            }
+            if (args.length < 1 || args.length > 2) {
+                return null;
+            }
+            int n = args.length == 2 ? Integer.parseInt(args[1]) : 1;
+            if (Math.abs(n) > MAX_STEP) {
+                return null;
+            }
+            BlockFace facing = player.getFacing();
+            int fx = facing.getModX(), fz = facing.getModZ();
+            return switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "x" -> new int[]{n, 0, 0};
+                case "y" -> new int[]{0, n, 0};
+                case "z" -> new int[]{0, 0, n};
+                case "up", "arriba" -> new int[]{0, n, 0};
+                case "down", "abajo" -> new int[]{0, -n, 0};
+                case "north", "norte" -> new int[]{0, 0, -n};
+                case "south", "sur" -> new int[]{0, 0, n};
+                case "east", "este" -> new int[]{n, 0, 0};
+                case "west", "oeste" -> new int[]{-n, 0, 0};
+                case "forward", "adelante" -> new int[]{fx * n, 0, fz * n};
+                case "back", "atras", "atrás" -> new int[]{-fx * n, 0, -fz * n};
+                case "left", "izquierda" -> new int[]{fz * n, 0, -fx * n};
+                case "right", "derecha" -> new int[]{-fz * n, 0, fx * n};
+                default -> null;
+            };
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String topMaterials(BuildManager.Pending pending) {
@@ -298,6 +381,15 @@ public final class AIBuildCommand implements TabExecutor {
         if (args.length == 1) {
             String start = args[0].toLowerCase(Locale.ROOT);
             return SUBCOMMANDS.stream().filter(s -> s.startsWith(start)).toList();
+        }
+        if (normalize(args[0]).equals("move")) {
+            String start = args[args.length - 1].toLowerCase(Locale.ROOT);
+            if (args.length == 2) {
+                return MOVE_DIRECTIONS.stream().filter(s -> s.startsWith(start)).toList();
+            }
+            if (args.length == 3 && MOVE_DIRECTIONS.contains(args[1].toLowerCase(Locale.ROOT))) {
+                return List.of("1", "5", "10", "-1", "-5", "-10");
+            }
         }
         return List.of();
     }
