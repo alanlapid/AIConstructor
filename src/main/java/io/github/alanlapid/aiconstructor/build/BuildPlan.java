@@ -52,8 +52,9 @@ public final class BuildPlan {
     }
 
     private boolean applyPart(JsonObject p) {
-        String shape = str(p, "shape");
-        String blockId = str(p, "block");
+        // Models do not always follow the schema; accept the field names they commonly use instead.
+        String shape = firstStr(p, "shape", "type", "kind");
+        String blockId = firstStr(p, "block", "material", "block_id");
         if (shape == null || blockId == null) {
             return false;
         }
@@ -299,6 +300,16 @@ public final class BuildPlan {
         }
     }
 
+    private static String firstStr(JsonObject o, String... keys) {
+        for (String k : keys) {
+            String v = str(o, k);
+            if (v != null) {
+                return v;
+            }
+        }
+        return null;
+    }
+
     private static String str(JsonObject o, String k) {
         return o.has(k) && o.get(k).isJsonPrimitive() ? o.get(k).getAsString() : null;
     }
@@ -311,7 +322,19 @@ public final class BuildPlan {
         }
     }
 
+    /** [x, y, z], or {"x": .., "y": .., "z": ..} which some models write instead. */
     private static int[] vec(JsonObject o, String k) {
+        if (o.has(k) && o.get(k).isJsonObject()) {
+            JsonObject v = o.getAsJsonObject(k);
+            if (!v.has("x") || !v.has("y") || !v.has("z")) {
+                return null;
+            }
+            try {
+                return new int[]{v.get("x").getAsInt(), v.get("y").getAsInt(), v.get("z").getAsInt()};
+            } catch (NumberFormatException | IllegalStateException | UnsupportedOperationException e) {
+                return null;
+            }
+        }
         if (!o.has(k) || !o.get(k).isJsonArray()) {
             return null;
         }

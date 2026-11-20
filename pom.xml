@@ -23,15 +23,17 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <paper.version>26.2.build.112-stable</paper.version>
-        <!-- Keep in sync with the "libraries" entry in plugin.yml (loaded by Paper at runtime). -->
+        <!-- Compiled against the Spigot API so one jar runs on both Spigot and Paper. -->
+        <spigot.version>26.3-R0.1-SNAPSHOT</spigot.version>
+        <adventure.version>4.23.0</adventure.version>
+        <!-- Keep in sync with the "libraries" entry in plugin.yml (loaded by the server at runtime). -->
         <anthropic.version>2.65.0</anthropic.version>
     </properties>
 
     <repositories>
         <repository>
-            <id>papermc</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
+            <id>spigotmc</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
             <id>enginehub</id>
@@ -41,12 +43,32 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>${paper.version}</version>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>${spigot.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Downloaded by Paper's library loader (plugin.yml "libraries"), so it is not shaded into the jar. -->
+        <!--
+          Adventure / MiniMessage for the messages. Spigot does not ship Adventure, so it is shaded and
+          relocated into the jar; messages are sent through the BungeeCord chat API that both Spigot and
+          Paper provide.
+        -->
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-api</artifactId>
+            <version>${adventure.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-minimessage</artifactId>
+            <version>${adventure.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-serializer-bungeecord</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+        <!-- Downloaded by the server's library loader (plugin.yml "libraries"), so it is not shaded into the jar. -->
         <dependency>
             <groupId>com.anthropic</groupId>
             <artifactId>anthropic-java</artifactId>
@@ -127,6 +149,59 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.2</version>
+                <dependencies>
+                    <!-- Newer ASM so the shader can read Java 25 class files. -->
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm</artifactId>
+                        <version>9.11.1</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm-commons</artifactId>
+                        <version>9.11.1</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <includes>
+                                    <include>net.kyori:*</include>
+                                </includes>
+                            </artifactSet>
+                            <relocations>
+                                <!-- Relocated so it never clashes with the Adventure built into Paper. -->
+                                <relocation>
+                                    <pattern>net.kyori</pattern>
+                                    <shadedPattern>io.github.alanlapid.aiconstructor.libs.kyori</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/versions/**/module-info.class</exclude>
+                                        <exclude>module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

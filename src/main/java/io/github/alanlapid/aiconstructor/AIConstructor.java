@@ -120,7 +120,8 @@ public final class AIConstructor extends JavaPlugin {
                 JsonParser.parseString(readResource("plan-schema.json")).getAsJsonObject(),
                 cfg.getString("provider.openai.response-format", "json_schema"),
                 Map.copyOf(extraHeaders),
-                cfg.getBoolean("provider.anthropic.refusal-fallback", true));
+                cfg.getBoolean("provider.anthropic.refusal-fallback", true),
+                cfg.getString("provider.ollama.think", "false"));
     }
 
     /** "env:NAME" reads the key from an environment variable; the placeholder value means "not set". */

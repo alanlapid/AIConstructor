@@ -1,7 +1,7 @@
 name: AIConstructor
 version: '${project.version}'
 main: io.github.alanlapid.aiconstructor.AIConstructor
-api-version: '26.2'
+api-version: '26.3'
 author: alanlapid
 website: https://github.com/alanlapid/AIConstructor
 description: Build structures from a text prompt or a photo using the LLM of your choice (Gemini, Claude, OpenAI-compatible or local Ollama).
@@ -12,7 +12,7 @@ libraries:
 commands:
   aibuild:
     description: Build a structure with AI.
-    usage: /aibuild <prompt> | photo <url> [prompt] | confirm | cancel | undo | status | reload
+    usage: /aibuild <prompt> | photo <url> [prompt] | move <x|y|z> <n> | confirm | cancel | undo | status | reload
     aliases: [aiconstructor, construir]
 
 permissions:

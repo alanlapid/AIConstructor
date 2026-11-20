@@ -28,7 +28,7 @@ provider:
   #   openai     default https://api.openai.com/v1
   #              OpenRouter https://openrouter.ai/api/v1 | Groq https://api.groq.com/openai/v1
   #              LM Studio http://localhost:1234/v1   | vLLM http://localhost:8000/v1
-  #   ollama     default http://localhost:11434
+  #   ollama     default http://localhost:11434 | Ollama Cloud https://ollama.com (needs api-key)
   #   anthropic  default https://api.anthropic.com
   base-url: ""
   models:
@@ -52,6 +52,13 @@ provider:
     extra-headers: {}
     #  HTTP-Referer: "https://your-server.com"
     #  X-Title: "My Server"
+
+  # Only for type: ollama
+  ollama:
+    # Reasoning ("thinking") before answering: false (fastest, recommended), true, low | medium | high
+    # (models that support levels), or default to leave it to the model. Thinking models can use up
+    # max-output-tokens thinking and never write the plan.
+    think: false
 
   # Only for type: anthropic
   anthropic:
@@ -78,6 +85,21 @@ limits:
   undo-history: 5
   max-image-mb: 8
   max-prompt-length: 500
+
+# ------------------------------------------------------------------------------------------------
+#  Preview
+# ------------------------------------------------------------------------------------------------
+preview:
+  # Show the build as fake blocks that only its owner can see (nothing is placed until confirmed).
+  # When false, only the particle outline is shown.
+  ghost-blocks: true
+  # Colored move handles (red X, green Y, blue Z arrows) around the preview, only visible to its owner.
+  # Left-click an arrow to grab it, look around to drag the build along that axis, left-click or sneak to drop.
+  handles: true
+  # How far away (blocks) a handle can be grabbed from.
+  handle-reach: 64
+  # How far (blocks, per axis) a preview can be moved from where it first appeared. 0 disables moving.
+  max-move-distance: 64
 
 # Worlds where /aibuild cannot be used.
 disabled-worlds: []

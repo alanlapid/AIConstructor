@@ -25,7 +25,9 @@ final class WorldGuardHook implements ProtectionHook {
         int denied = 0;
         Location location = new Location(world, 0, 0, 0);
         for (BuildManager.Placement p : blocks) {
-            location.set(p.x(), p.y(), p.z());
+            location.setX(p.x());
+            location.setY(p.y());
+            location.setZ(p.z());
             if (!query.testBuild(BukkitAdapter.adapt(location), localPlayer, Flags.BLOCK_PLACE)) {
                 denied++;
             }

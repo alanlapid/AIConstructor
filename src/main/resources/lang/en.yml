@@ -10,6 +10,7 @@ help: |-
   <gradient:#A26AFF:#09ADD3><b>AI Constructor</b></gradient>
   <white>/{label} <prompt></white> <gray>- e.g. /{label} a small wooden sailboat with white sails
   <white>/{label} photo <url> [prompt]</white> <gray>- use a photo as reference (direct PNG/JPG/WEBP link)
+  <white>/{label} move <x|y|z> <n></white> <gray>- move the preview (also up, down, forward, back, left, right)
   <white>/{label} confirm | cancel | undo | status</white>
   <dark_gray>The build appears in front of you, facing where you look.
 
@@ -28,8 +29,17 @@ preview: |-
   <gradient:#A26AFF:#09ADD3><b>{name}</b></gradient>
   <gray>Size: <white>{sx}x{sy}x{sz}</white> | Blocks: <white>{blocks}</white> | Parts: <white>{parts}</white>
   <gray>Materials: <white>{materials}</white>
-  <gray>The outline is shown with particles (expires in {expire}s).
-  <click:run_command:'/aibuild confirm'><hover:show_text:'Start building'><green><b>[BUILD]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Discard'><red><b>[CANCEL]</b></red></hover></click> <dark_gray>| Don't like the spot? Look somewhere else and ask again.
+  <gray>Only you can see the preview (expires {expire}s after the last change).
+  <gray><white>Left-click</white> a <red>red</red>/<green>green</green>/<blue>blue</blue> arrow to grab it, look around to drag, <white>left-click</white> again or <white>sneak</white> to drop. Or use the buttons:
+move-controls: |-
+  <gray>Move:</gray> <red><b>X</b> <click:run_command:'/aibuild move x -5'><hover:show_text:'5 → west (X-)'>[-5]</hover></click><click:run_command:'/aibuild move x -1'><hover:show_text:'1 → west (X-)'>[-1]</hover></click><click:run_command:'/aibuild move x 1'><hover:show_text:'1 → east (X+)'>[+1]</hover></click><click:run_command:'/aibuild move x 5'><hover:show_text:'5 → east (X+)'>[+5]</hover></click></red>  <green><b>Y</b> <click:run_command:'/aibuild move y -5'><hover:show_text:'5 → down (Y-)'>[-5]</hover></click><click:run_command:'/aibuild move y -1'><hover:show_text:'1 → down (Y-)'>[-1]</hover></click><click:run_command:'/aibuild move y 1'><hover:show_text:'1 → up (Y+)'>[+1]</hover></click><click:run_command:'/aibuild move y 5'><hover:show_text:'5 → up (Y+)'>[+5]</hover></click></green>  <blue><b>Z</b> <click:run_command:'/aibuild move z -5'><hover:show_text:'5 → north (Z-)'>[-5]</hover></click><click:run_command:'/aibuild move z -1'><hover:show_text:'1 → north (Z-)'>[-1]</hover></click><click:run_command:'/aibuild move z 1'><hover:show_text:'1 → south (Z+)'>[+1]</hover></click><click:run_command:'/aibuild move z 5'><hover:show_text:'5 → south (Z+)'>[+5]</hover></click></blue>
+  <click:run_command:'/aibuild confirm'><hover:show_text:'Start building'><green><b>[BUILD]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Discard'><red><b>[CANCEL]</b></red></hover></click> <dark_gray>| /aibuild move <x|y|z> <n> · up · down · forward · back · left · right
+moved: "<gray>Preview at <white>{x} {y} {z}</white> <dark_gray>(moved {ox}, {oy}, {oz})"
+dragging: "<gray>Dragging {axis} <dark_gray>·</dark_gray> <white>{x} {y} {z}</white> <dark_gray>(moved {ox}, {oy}, {oz}) · left-click or sneak to drop"
+move-usage: "<red>Usage: <white>/{label} move <x|y|z> <n></white>, <white>/{label} move <dx> <dy> <dz></white> or <white>/{label} move <up|down|forward|back|left|right|north|south|east|west> [n]"
+move-out-of-world: "<red>The build would go outside the world height."
+move-too-far: "<red>A preview can only be moved {max} blocks from where it appeared."
+move-protected: "<red>{blocks} blocks would land in a protected area there. The preview stayed where it was."
 rejected-blocks: "<dark_gray>Discarded blocks: {blocks}"
 preview-expired: "<gray>The preview of <white>{name}</white> expired."
 nothing-pending: "<red>There is no build waiting for confirmation."

@@ -2,6 +2,9 @@ package io.github.alanlapid.aiconstructor.util;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.bungeecord.BungeeComponentSerializer;
+import net.md_5.bungee.api.ChatMessageType;
+import org.bukkit.entity.Player;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -67,12 +70,25 @@ public final class Messages {
 
     /** Sends a prefixed chat message. */
     public void send(CommandSender to, String key, Object... placeholders) {
-        to.sendMessage(MiniMessage.miniMessage().deserialize(raw("prefix") + raw(key, placeholders)));
+        sendComponent(to, MiniMessage.miniMessage().deserialize(raw("prefix") + raw(key, placeholders)));
     }
 
     /** Sends a chat message without prefix. */
     public void sendPlain(CommandSender to, String key, Object... placeholders) {
-        to.sendMessage(component(key, placeholders));
+        sendComponent(to, component(key, placeholders));
+    }
+
+    // Spigot has no Adventure API, so components go out through the BungeeCord chat API that both Spigot and
+    // Paper ship. Colours, hover and click events are kept.
+
+    /** Sends a component as a chat message. */
+    public void sendComponent(CommandSender to, Component component) {
+        to.spigot().sendMessage(BungeeComponentSerializer.get().serialize(component));
+    }
+
+    /** Shows a component on the player's action bar. */
+    public void sendActionBar(Player to, Component component) {
+        to.spigot().sendMessage(ChatMessageType.ACTION_BAR, BungeeComponentSerializer.get().serialize(component));
     }
 
     public static String esc(String text) {

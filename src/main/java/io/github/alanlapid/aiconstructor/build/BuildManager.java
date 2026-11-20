@@ -10,15 +10,24 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import java.time.LocalDate;
 import java.util.ArrayDeque;
@@ -39,19 +48,32 @@ public final class BuildManager implements Listener {
     public record Placement(int x, int y, int z, BlockData data) {
     }
 
-    /** A generated build waiting for confirmation. */
+    /** A generated build waiting for confirmation. It can be moved until it is confirmed. */
     public static final class Pending {
         public final String name;
         public final World world;
-        public final List<Placement> blocks;
-        public final int minX, minY, minZ, maxX, maxY, maxZ;
-        final long createdAt = System.currentTimeMillis();
+        public List<Placement> blocks;
+        public int minX, minY, minZ, maxX, maxY, maxZ;
+        /** Total distance moved from where the build first appeared. */
+        public int offsetX, offsetY, offsetZ;
+        /** Last time the player touched it (created or moved); the preview expires from here. */
+        long touchedAt = System.currentTimeMillis();
         BukkitTask preview;
+        boolean ghostShown;
+        /** Offset the ghost blocks were last drawn at; differs from offset* while a drag is in progress. */
+        int ghostOffsetX, ghostOffsetY, ghostOffsetZ;
+        boolean ghostDirty;
+        int previewTicks;
+        Gizmo gizmo;
 
         Pending(String name, World world, List<Placement> blocks) {
             this.name = name;
             this.world = world;
             this.blocks = blocks;
+            recomputeBounds();
+        }
+
+        void recomputeBounds() {
             int x1 = Integer.MAX_VALUE, y1 = Integer.MAX_VALUE, z1 = Integer.MAX_VALUE;
             int x2 = Integer.MIN_VALUE, y2 = Integer.MIN_VALUE, z2 = Integer.MIN_VALUE;
             for (Placement p : blocks) {
@@ -71,6 +93,12 @@ public final class BuildManager implements Listener {
         }
     }
 
+    /** Outcome of moving a pending build. */
+    public enum MoveResult { MOVED, NOTHING_PENDING, OUT_OF_WORLD, TOO_FAR, PROTECTED }
+
+    public record MoveOutcome(MoveResult result, int deniedBlocks) {
+    }
+
     /** Result of placing a plan in front of a player. */
     public record PendingResult(Pending pending, int deniedBlocks) {
     }
@@ -85,11 +113,36 @@ public final class BuildManager implements Listener {
     record Running(BukkitTask task, UndoRecord record) {
     }
 
+    /** A handle being dragged: the build follows the player's look, projected onto the handle's axis. */
+    private static final class Drag {
+        final int axis;
+        /** A point on the axis line through the grabbed handle (the line does not change as the build slides). */
+        final Vector origin;
+        final double grabParam;
+        int moved;
+        int failedTarget = Integer.MIN_VALUE;
+        int ticks;
+        BukkitTask task;
+
+        Drag(int axis, Vector origin, double grabParam) {
+            this.axis = axis;
+            this.origin = origin;
+            this.grabParam = grabParam;
+        }
+    }
+
+    /** Largest jump (blocks) per tick while dragging, so looking almost along the axis cannot fling the build. */
+    private static final int MAX_DRAG_STEP = 8;
+    /** One click can arrive as several events (block dig + arm swing) within this window. */
+    private static final long GRAB_DEBOUNCE_MS = 200;
+
     private final AIConstructor plugin;
     private final Set<UUID> generating = new HashSet<>();
     private final Map<UUID, Pending> pending = new HashMap<>();
     private final Map<UUID, Running> running = new HashMap<>();
     private final Map<UUID, Deque<UndoRecord>> history = new HashMap<>();
+    private final Map<UUID, Drag> drags = new HashMap<>();
+    private final Map<UUID, Long> lastGrabToggle = new HashMap<>();
     private final Map<UUID, Long> lastGeneration = new HashMap<>();
     private final Map<UUID, Integer> dailyCount = new HashMap<>();
     private LocalDate countDay = LocalDate.now();
@@ -269,14 +322,252 @@ public final class BuildManager implements Listener {
                 p.preview.cancel();
                 return;
             }
-            if (System.currentTimeMillis() - p.createdAt > expireMs) {
+            if (System.currentTimeMillis() - p.touchedAt > expireMs) {
                 cancelPending(id);
                 messages().send(online, "preview-expired", "name", p.name);
                 return;
             }
             drawOutline(online, p);
+            // Fake blocks vanish when the client reloads a chunk or a real block updates: resend every 3 s.
+            if (++p.previewTicks % 6 == 0 && !drags.containsKey(id)) {
+                refreshGhost(online, p);
+            }
+            if (p.gizmo != null) {
+                p.gizmo.update(online, p);
+            }
         }, 0L, 10L);
+        refreshGhost(player, p);
+        if (plugin.getConfig().getBoolean("preview.handles", true)) {
+            p.gizmo = new Gizmo(plugin, player, p);
+        }
         return new PendingResult(p, 0);
+    }
+
+    /**
+     * Shifts the pending build by (dx, dy, dz) blocks. The move is refused, and the build stays where it was, if
+     * it would leave the world height, go further than preview.max-move-distance from where it first appeared,
+     * or land on blocks the player cannot build on.
+     */
+    public MoveOutcome move(Player player, int dx, int dy, int dz) {
+        return move(player, dx, dy, dz, true);
+    }
+
+    /** As {@link #move(Player, int, int, int)}; with redrawGhost false the ghost is only marked stale. */
+    private MoveOutcome move(Player player, int dx, int dy, int dz, boolean redrawGhost) {
+        UUID id = player.getUniqueId();
+        Pending p = pending.get(id);
+        if (p == null) {
+            return new MoveOutcome(MoveResult.NOTHING_PENDING, 0);
+        }
+        int maxMove = Math.max(0, plugin.getConfig().getInt("preview.max-move-distance", 64));
+        if (Math.abs((long) p.offsetX + dx) > maxMove || Math.abs((long) p.offsetY + dy) > maxMove
+                || Math.abs((long) p.offsetZ + dz) > maxMove) {
+            return new MoveOutcome(MoveResult.TOO_FAR, 0);
+        }
+        if (p.minY + dy < p.world.getMinHeight() || p.maxY + dy > p.world.getMaxHeight() - 1) {
+            return new MoveOutcome(MoveResult.OUT_OF_WORLD, 0);
+        }
+        List<Placement> moved = new ArrayList<>(p.blocks.size());
+        for (Placement pl : p.blocks) {
+            moved.add(new Placement(pl.x() + dx, pl.y() + dy, pl.z() + dz, pl.data()));
+        }
+        if (!player.hasPermission("aiconstructor.bypass.protection")) {
+            int denied = protection.countDenied(player, p.world, moved);
+            if (denied > 0) {
+                return new MoveOutcome(MoveResult.PROTECTED, denied);
+            }
+        }
+        p.blocks = moved;
+        p.offsetX += dx;
+        p.offsetY += dy;
+        p.offsetZ += dz;
+        p.recomputeBounds();
+        p.touchedAt = System.currentTimeMillis();
+        if (redrawGhost) {
+            refreshGhost(player, p);
+        } else {
+            p.ghostDirty = true;
+        }
+        if (p.gizmo != null) {
+            p.gizmo.update(player, p);
+        }
+        drawOutline(player, p);
+        return new MoveOutcome(MoveResult.MOVED, 0);
+    }
+
+    // ---- ghost blocks: client-side fake blocks only the owner sees; the world is never changed -------------------
+
+    /**
+     * Redraws the ghost at the build's current position in one batch: real blocks go back where the ghost was last
+     * drawn, then the ghost is drawn where the build is now (overlapping positions simply get the ghost).
+     */
+    private void refreshGhost(Player player, Pending p) {
+        if (!plugin.getConfig().getBoolean("preview.ghost-blocks", true) || !player.getWorld().equals(p.world)) {
+            return;
+        }
+        Map<Long, BlockState> changes = new HashMap<>(p.blocks.size() * 4);
+        if (p.ghostShown) {
+            restoreInto(changes, p);
+        }
+        for (Placement pl : p.blocks) {
+            if (p.world.isChunkLoaded(pl.x() >> 4, pl.z() >> 4)) {
+                // A snapshot of the real block, changed only in the copy sent to this player.
+                BlockState state = p.world.getBlockAt(pl.x(), pl.y(), pl.z()).getState();
+                state.setBlockData(pl.data());
+                changes.put(key(pl.x(), pl.y(), pl.z()), state);
+            }
+        }
+        player.sendBlockChanges(changes.values());
+        p.ghostShown = true;
+        p.ghostDirty = false;
+        p.ghostOffsetX = p.offsetX;
+        p.ghostOffsetY = p.offsetY;
+        p.ghostOffsetZ = p.offsetZ;
+    }
+
+    /** Sends the player the real blocks again where the ghost was last drawn. */
+    private static void clearGhost(Player player, Pending p) {
+        if (!p.ghostShown || player == null || !player.getWorld().equals(p.world)) {
+            return;
+        }
+        Map<Long, BlockState> changes = new HashMap<>(p.blocks.size() * 2);
+        restoreInto(changes, p);
+        player.sendBlockChanges(changes.values());
+        p.ghostShown = false;
+    }
+
+    private static void restoreInto(Map<Long, BlockState> changes, Pending p) {
+        int sx = p.ghostOffsetX - p.offsetX, sy = p.ghostOffsetY - p.offsetY, sz = p.ghostOffsetZ - p.offsetZ;
+        for (Placement pl : p.blocks) {
+            int x = pl.x() + sx, y = pl.y() + sy, z = pl.z() + sz;
+            if (p.world.isChunkLoaded(x >> 4, z >> 4)) {
+                changes.put(key(x, y, z), p.world.getBlockAt(x, y, z).getState());
+            }
+        }
+    }
+
+    /** Packs a block position into one long (26 bits x, 12 bits y, 26 bits z), like vanilla BlockPos. */
+    private static long key(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
+    }
+
+    // ---- drag handles -------------------------------------------------------------------------------------------
+
+    /** Grabs a handle: from now on the build follows the player's look along that handle's axis. */
+    private void startDrag(Player player, Pending p, int handle) {
+        int axis = Gizmo.axis(handle);
+        Vector origin = Gizmo.base(p, handle);
+        Double grab = axisParam(player, origin, axis);
+        if (grab == null) {
+            return;
+        }
+        UUID id = player.getUniqueId();
+        Drag drag = new Drag(axis, origin, grab);
+        p.gizmo.highlight(handle);
+        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.8f, 1.2f);
+        drag.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> tickDrag(id, drag), 1L, 1L);
+        drags.put(id, drag);
+        sendDragBar(player, p, drag);
+    }
+
+    private void tickDrag(UUID id, Drag drag) {
+        Player player = Bukkit.getPlayer(id);
+        Pending p = pending.get(id);
+        if (player == null || p == null || drags.get(id) != drag || !player.getWorld().equals(p.world)) {
+            endDrag(id);
+            return;
+        }
+        drag.ticks++;
+        Double param = axisParam(player, drag.origin, drag.axis);
+        if (param != null) {
+            int target = (int) Math.round(param - drag.grabParam);
+            int step = Math.clamp(target - drag.moved, -MAX_DRAG_STEP, MAX_DRAG_STEP);
+            // Do not retry a refused position every tick; wait until the player points somewhere else.
+            if (step != 0 && target != drag.failedTarget) {
+                int[] delta = new int[3];
+                delta[drag.axis] = step;
+                MoveOutcome outcome = move(player, delta[0], delta[1], delta[2], false);
+                if (outcome.result() == MoveResult.MOVED) {
+                    drag.moved += step;
+                    drag.failedTarget = Integer.MIN_VALUE;
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.4f, 1.8f);
+                    sendDragBar(player, p, drag);
+                } else {
+                    drag.failedTarget = target;
+                    String key = switch (outcome.result()) {
+                        case OUT_OF_WORLD -> "move-out-of-world";
+                        case TOO_FAR -> "move-too-far";
+                        default -> "move-protected";
+                    };
+                    messages().sendActionBar(player, messages().component(key, "blocks", outcome.deniedBlocks(),
+                            "max", Math.max(0, plugin.getConfig().getInt("preview.max-move-distance", 64))));
+                }
+            }
+        }
+        // Resending thousands of fake blocks every tick is too much; catch up a few times per second instead.
+        if (p.ghostDirty && drag.ticks % 3 == 0) {
+            refreshGhost(player, p);
+        }
+        if (drag.ticks % 20 == 0) {
+            sendDragBar(player, p, drag);
+        }
+    }
+
+    private void sendDragBar(Player player, Pending p, Drag drag) {
+        String tag = Gizmo.AXIS_TAGS[drag.axis];
+        String axis = "<" + tag + "><b>" + Gizmo.AXIS_NAMES[drag.axis] + "</b></" + tag + ">";
+        messages().sendActionBar(player, messages().component("dragging", "axis", new Messages.Raw(axis),
+                "x", p.minX, "y", p.minY, "z", p.minZ,
+                "ox", signed(p.offsetX), "oy", signed(p.offsetY), "oz", signed(p.offsetZ)));
+    }
+
+    private static String signed(int n) {
+        return n > 0 ? "+" + n : String.valueOf(n);
+    }
+
+    /** Drops the handle being dragged, if any. */
+    public boolean endDrag(UUID id) {
+        Drag drag = drags.remove(id);
+        if (drag == null) {
+            return false;
+        }
+        drag.task.cancel();
+        Pending p = pending.get(id);
+        Player player = Bukkit.getPlayer(id);
+        if (p != null) {
+            if (p.gizmo != null) {
+                p.gizmo.highlight(-1);
+            }
+            if (player != null && p.ghostDirty) {
+                refreshGhost(player, p);
+            }
+        }
+        if (player != null) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.8f, 0.9f);
+        }
+        return true;
+    }
+
+    /**
+     * Where along the axis line (origin + s * axis) the player's look ray passes closest: the "mouse position"
+     * projected onto the axis, as in a 3D editor. Null when looking (almost) along the axis or away from it.
+     */
+    private static Double axisParam(Player player, Vector origin, int axis) {
+        Location eye = player.getEyeLocation();
+        Vector d = eye.getDirection().normalize();
+        Vector a = Gizmo.axisVector(axis);
+        Vector w = origin.clone().subtract(eye.toVector());
+        double b = a.dot(d);
+        double denom = 1 - b * b;
+        if (denom < 0.02) {
+            return null;
+        }
+        double ad = a.dot(w), dw = d.dot(w);
+        double rayT = (dw - b * ad) / denom;
+        if (rayT <= 0) {
+            return null;
+        }
+        return (b * dw - ad) / denom;
     }
 
     /** Rotates local (x, z) the same way StructureRotation rotates block states. */
@@ -314,13 +605,18 @@ public final class BuildManager implements Listener {
     }
 
     public boolean cancelPending(UUID id) {
+        endDrag(id);
         Pending p = pending.remove(id);
         if (p == null) {
             return false;
         }
+        if (p.gizmo != null) {
+            p.gizmo.remove();
+        }
         if (p.preview != null) {
             p.preview.cancel();
         }
+        clearGhost(Bukkit.getPlayer(id), p);
         return true;
     }
 
@@ -352,7 +648,7 @@ public final class BuildManager implements Listener {
                 Block block = p.world.getBlockAt(pl.x(), pl.y(), pl.z());
                 Material current = block.getType();
                 // Never overwrite chests, furnaces, signs, etc.
-                if (!current.isAir() && block.getState(false) instanceof TileState) {
+                if (!current.isAir() && block.getState() instanceof TileState) {
                     skipped[0]++;
                     continue;
                 }
@@ -365,7 +661,7 @@ public final class BuildManager implements Listener {
             }
             Player online = Bukkit.getPlayer(id);
             if (online != null) {
-                online.sendActionBar(messages().component("build-progress", "name", p.name,
+                messages().sendActionBar(online, messages().component("build-progress", "name", p.name,
                         "percent", 100L * index[0] / total, "done", index[0], "total", total));
             }
             if (index[0] >= total) {
@@ -444,9 +740,72 @@ public final class BuildManager implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         cancelPending(event.getPlayer().getUniqueId());
+        lastGrabToggle.remove(event.getPlayer().getUniqueId());
+    }
+
+    /** Left-click grabs the handle the player points at, or drops the one being dragged. */
+    @EventHandler(priority = EventPriority.LOW)
+    public void onLeftClick(PlayerInteractEvent event) {
+        Action action = event.getAction();
+        if (event.getHand() != EquipmentSlot.HAND
+                || (action != Action.LEFT_CLICK_AIR && action != Action.LEFT_CLICK_BLOCK)) {
+            return;
+        }
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+        boolean dragging = drags.containsKey(id);
+        int handle = -1;
+        Pending p = pending.get(id);
+        if (!dragging) {
+            if (p == null || p.gizmo == null) {
+                return;
+            }
+            handle = p.gizmo.pick(player, p, plugin.getConfig().getDouble("preview.handle-reach", 64));
+            if (handle < 0) {
+                return;
+            }
+        }
+        event.setCancelled(true);
+        // One click can arrive as several events (block dig + arm swing): treat them as one.
+        long now = System.currentTimeMillis();
+        Long last = lastGrabToggle.get(id);
+        if (last != null && now - last < GRAB_DEBOUNCE_MS) {
+            return;
+        }
+        lastGrabToggle.put(id, now);
+        if (dragging) {
+            endDrag(id);
+        } else {
+            startDrag(player, p, handle);
+        }
+    }
+
+    /** The click that grabs or drops a handle must not also break the block behind it. */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onBreak(BlockBreakEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        Long last = lastGrabToggle.get(id);
+        if (drags.containsKey(id) || (last != null && System.currentTimeMillis() - last < GRAB_DEBOUNCE_MS)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onSneak(PlayerToggleSneakEvent event) {
+        if (event.isSneaking()) {
+            endDrag(event.getPlayer().getUniqueId());
+        }
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        endDrag(event.getPlayer().getUniqueId());
     }
 
     public void shutdown() {
+        for (UUID id : new ArrayList<>(drags.keySet())) {
+            endDrag(id);
+        }
         for (UUID id : new ArrayList<>(pending.keySet())) {
             cancelPending(id);
         }

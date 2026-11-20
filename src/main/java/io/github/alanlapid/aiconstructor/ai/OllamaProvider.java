@@ -6,7 +6,7 @@ import com.google.gson.JsonObject;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Local models through Ollama's native /api/chat endpoint (structured output via "format"). */
+/** Ollama's native /api/chat endpoint, local or Ollama Cloud (https://ollama.com with an API key). */
 public final class OllamaProvider implements AIProvider {
 
     private final ProviderSettings settings;
@@ -26,6 +26,14 @@ public final class OllamaProvider implements AIProvider {
         body.addProperty("model", model);
         body.addProperty("stream", false);
         body.add("format", settings.planSchema());
+        // Reasoning models can spend the whole token budget thinking and never write the plan.
+        String think = settings.ollamaThink() == null ? "" : settings.ollamaThink().trim().toLowerCase(java.util.Locale.ROOT);
+        switch (think) {
+            case "", "default" -> {
+            }
+            case "true", "false" -> body.addProperty("think", Boolean.parseBoolean(think));
+            default -> body.addProperty("think", think);
+        }
 
         JsonObject options = new JsonObject();
         options.addProperty("temperature", settings.temperature());

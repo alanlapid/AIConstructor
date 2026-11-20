@@ -10,6 +10,7 @@ help: |-
   <gradient:#A26AFF:#09ADD3><b>Constructor con IA</b></gradient>
   <white>/{label} <descripción></white> <gray>- ej: /{label} un velero de madera con velas blancas
   <white>/{label} photo <enlace> [descripción]</white> <gray>- usa una foto de referencia (enlace directo a PNG/JPG/WEBP)
+  <white>/{label} move <x|y|z> <n></white> <gray>- mueve la vista previa (también up, down, forward, back, left, right)
   <white>/{label} confirm | cancel | undo | status</white>
   <dark_gray>La construcción aparece delante de ti, mirando hacia donde miras.
 
@@ -28,8 +29,17 @@ preview: |-
   <gradient:#A26AFF:#09ADD3><b>{name}</b></gradient>
   <gray>Tamaño: <white>{sx}x{sy}x{sz}</white> | Bloques: <white>{blocks}</white> | Piezas: <white>{parts}</white>
   <gray>Materiales: <white>{materials}</white>
-  <gray>El contorno está marcado con partículas (caduca en {expire}s).
-  <click:run_command:'/aibuild confirm'><hover:show_text:'Empezar a construir'><green><b>[CONSTRUIR]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Descartar'><red><b>[CANCELAR]</b></red></hover></click> <dark_gray>| ¿No te gusta la posición? Mira hacia otro lado y repite el pedido.
+  <gray>Solo tú ves la vista previa (caduca {expire}s después del último cambio).
+  <gray><white>Clic izquierdo</white> en una flecha <red>roja</red>/<green>verde</green>/<blue>azul</blue> para agarrarla, mira para arrastrar, <white>clic izquierdo</white> otra vez o <white>agáchate</white> para soltar. O usa los botones:
+move-controls: |-
+  <gray>Mover:</gray> <red><b>X</b> <click:run_command:'/aibuild move x -5'><hover:show_text:'5 → oeste (X-)'>[-5]</hover></click><click:run_command:'/aibuild move x -1'><hover:show_text:'1 → oeste (X-)'>[-1]</hover></click><click:run_command:'/aibuild move x 1'><hover:show_text:'1 → este (X+)'>[+1]</hover></click><click:run_command:'/aibuild move x 5'><hover:show_text:'5 → este (X+)'>[+5]</hover></click></red>  <green><b>Y</b> <click:run_command:'/aibuild move y -5'><hover:show_text:'5 → abajo (Y-)'>[-5]</hover></click><click:run_command:'/aibuild move y -1'><hover:show_text:'1 → abajo (Y-)'>[-1]</hover></click><click:run_command:'/aibuild move y 1'><hover:show_text:'1 → arriba (Y+)'>[+1]</hover></click><click:run_command:'/aibuild move y 5'><hover:show_text:'5 → arriba (Y+)'>[+5]</hover></click></green>  <blue><b>Z</b> <click:run_command:'/aibuild move z -5'><hover:show_text:'5 → norte (Z-)'>[-5]</hover></click><click:run_command:'/aibuild move z -1'><hover:show_text:'1 → norte (Z-)'>[-1]</hover></click><click:run_command:'/aibuild move z 1'><hover:show_text:'1 → sur (Z+)'>[+1]</hover></click><click:run_command:'/aibuild move z 5'><hover:show_text:'5 → sur (Z+)'>[+5]</hover></click></blue>
+  <click:run_command:'/aibuild confirm'><hover:show_text:'Empezar a construir'><green><b>[CONSTRUIR]</b></green></hover></click>  <click:run_command:'/aibuild cancel'><hover:show_text:'Descartar'><red><b>[CANCELAR]</b></red></hover></click> <dark_gray>| /aibuild move <x|y|z> <n> · up · down · forward · back · left · right
+moved: "<gray>Vista previa en <white>{x} {y} {z}</white> <dark_gray>(movida {ox}, {oy}, {oz})"
+dragging: "<gray>Arrastrando {axis} <dark_gray>·</dark_gray> <white>{x} {y} {z}</white> <dark_gray>(movida {ox}, {oy}, {oz}) · clic izquierdo o agáchate para soltar"
+move-usage: "<red>Uso: <white>/{label} move <x|y|z> <n></white>, <white>/{label} move <dx> <dy> <dz></white> o <white>/{label} move <arriba|abajo|adelante|atras|izquierda|derecha|norte|sur|este|oeste> [n]"
+move-out-of-world: "<red>La construcción saldría de la altura del mundo."
+move-too-far: "<red>La vista previa solo se puede mover {max} bloques desde donde apareció."
+move-protected: "<red>{blocks} bloques caerían en una zona protegida. La vista previa se quedó donde estaba."
 rejected-blocks: "<dark_gray>Bloques descartados: {blocks}"
 preview-expired: "<gray>La vista previa de <white>{name}</white> caducó."
 nothing-pending: "<red>No hay ninguna construcción esperando confirmación."
