@@ -23,7 +23,7 @@ The AI designs the build, you get a **particle preview** in front of you, and af
   - `gemini`: Google AI Studio (has a free tier)
   - `anthropic`: Claude, through the official Anthropic Java SDK
   - `openai`: OpenAI, OpenRouter, Groq, DeepSeek, Mistral, Together, LM Studio, vLLM, LocalAI… anything that speaks the Chat Completions API
-  - `ollama`: local models through Ollama's native API, no key needed
+  - `ollama`: local models through Ollama's native API (no key needed), or Ollama Cloud with an API key
 - **Model rotation.** If a model is overloaded or out of quota, the next one in the list is tried automatically. Players see every attempt live.
 - **Structured output.** The model returns a JSON plan made of shapes (`fill`, `walls`, `hollow_box`, `line`, `cylinder`, `sphere`, `pyramid`, `block`). Models without structured output are supported too.
 - **Photos as reference** for models with vision. Downloads are size-limited and cannot reach private or internal addresses.
@@ -75,6 +75,18 @@ provider:
   base-url: "http://localhost:11434"
   models: [qwen3:14b]
   vision: false        # true only for vision models such as llava / qwen2.5vl
+```
+
+**Ollama Cloud**
+```yaml
+provider:
+  type: ollama
+  base-url: "https://ollama.com"
+  api-key: "env:OLLAMA_API_KEY"
+  models: [minimax-m3]   # cloud API names have no ":cloud" suffix
+  vision: false
+  ollama:
+    think: false         # thinking models can otherwise spend the whole token budget reasoning
 ```
 
 **LM Studio / vLLM (OpenAI-compatible, local)**

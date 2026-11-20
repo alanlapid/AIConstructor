@@ -6,7 +6,8 @@ COORDINATE SYSTEM (local to the build):
 - Directions for block states: +x is "east", -x is "west", +z is "south", -z is "north". The player looks at the build from the north side (they stand at negative z), so the FRONT / entrance of the build should face north (z = 0 side).
 - y = 0 is the first layer placed ON the ground. Do not build underground.
 
-PARTS (applied in order; later parts overwrite earlier ones, use block "air" to carve openings like doors and windows):
+PARTS (applied in order; later parts overwrite earlier ones, use block "air" to carve openings like doors and windows).
+Each part names its kind in the "shape" field (not "type"), e.g. {"shape": "fill", "block": "oak_planks", "from": [0,0,0], "to": [6,0,6]}:
 - fill: solid box from..to (inclusive corners).
 - hollow_box: only the shell of the box from..to (walls, floor and ceiling).
 - walls: the 4 vertical walls of the box from..to, no floor or ceiling.

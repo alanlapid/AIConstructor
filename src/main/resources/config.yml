@@ -28,7 +28,7 @@ provider:
   #   openai     default https://api.openai.com/v1
   #              OpenRouter https://openrouter.ai/api/v1 | Groq https://api.groq.com/openai/v1
   #              LM Studio http://localhost:1234/v1   | vLLM http://localhost:8000/v1
-  #   ollama     default http://localhost:11434
+  #   ollama     default http://localhost:11434 | Ollama Cloud https://ollama.com (needs api-key)
   #   anthropic  default https://api.anthropic.com
   base-url: ""
   models:
@@ -52,6 +52,13 @@ provider:
     extra-headers: {}
     #  HTTP-Referer: "https://your-server.com"
     #  X-Title: "My Server"
+
+  # Only for type: ollama
+  ollama:
+    # Reasoning ("thinking") before answering: false (fastest, recommended), true, low | medium | high
+    # (models that support levels), or default to leave it to the model. Thinking models can use up
+    # max-output-tokens thinking and never write the plan.
+    think: false
 
   # Only for type: anthropic
   anthropic:

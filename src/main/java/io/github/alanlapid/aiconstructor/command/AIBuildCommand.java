@@ -227,6 +227,12 @@ public final class AIBuildCommand implements TabExecutor {
         }
         BuildManager.Pending pending = created.pending();
         if (pending == null) {
+            String sample = result.plan().has("parts") && result.plan().get("parts").isJsonArray()
+                    && !result.plan().getAsJsonArray("parts").isEmpty()
+                    ? result.plan().getAsJsonArray("parts").get(0).toString() : result.plan().toString();
+            plugin.getLogger().warning("No usable blocks from " + result.model() + " (" + plan.partsSkipped() + "/"
+                    + plan.partsTotal() + " parts skipped). First part: "
+                    + (sample.length() > 300 ? sample.substring(0, 300) + "..." : sample));
             msg().send(player, "no-valid-blocks");
             return;
         }

@@ -15,7 +15,8 @@ public record ProviderSettings(
         JsonObject planSchema,
         String openAiResponseFormat,
         Map<String, String> extraHeaders,
-        boolean anthropicRefusalFallback) {
+        boolean anthropicRefusalFallback,
+        String ollamaThink) {
 
     /** base-url from the config, or the given default when it is empty. Never ends with a slash. */
     public String baseUrlOr(String defaultUrl) {
